@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer-experience
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgbouncer-experience
+  template:
+    metadata:
+      labels:
+        app: pgbouncer-experience
+        tier: pgbouncer
+    spec:
+      containers:
+        - name: pgbouncer
+          image: edoburu/pgbouncer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: pgbouncer
+              containerPort: 5432
+          env:
+            - name: DB_HOST
+              value: postgres-experience.ecommerce.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              value: ec_experience
+            - name: AUTH_TYPE
+              value: scram-sha-256
+            # Session pool: database/sql (sqlx) memakai prepared statement pgx
+            # yang tidak aman di transaction pooling tanpa konfigurasi khusus.
+            - name: POOL_MODE
+              value: session
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -h 127.0.0.1 -p 5432 -U \"$DB_USER\" -d ec_experience"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer-experience
+  namespace: ecommerce
+spec:
+  selector:
+    app: pgbouncer-experience
+  ports:
+    - name: pgbouncer
+      port: 5432
+      targetPort: 5432

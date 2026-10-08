@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-exporter-netpol
+  namespace: ecommerce
+spec:
+  # Prometheus men-scrape keenam exporter (port 9187); exporter perlu egress ke
+  # instance Postgres context-nya (port 5432) plus DNS.
+  podSelector:
+    matchLabels:
+      tier: postgres-exporter
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+      ports:
+        - protocol: TCP
+          port: 9187
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

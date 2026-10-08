@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb.merchant_policy;
+
+import "merchant_policy/merchant_policy_common.proto";
+import "merchant/merchant_query.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/merchant_policy;pb_merchant_policy";
+
+service MerchantPolicyQueryService {
+    rpc FindAll(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantPolicies);
+    rpc FindById(FindByIdMerchantPoliciesRequest) returns (ApiResponseMerchantPolicies);
+
+    rpc FindByActive(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantPoliciesDeleteAt);
+    rpc FindByTrashed(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantPoliciesDeleteAt);
+}

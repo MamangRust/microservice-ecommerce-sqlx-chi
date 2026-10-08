@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package pb.order_item;
+
+import "order_item/order_item_common.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/order_item;pb_order_item";
+
+message FindAllOrderItemRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+service OrderItemQueryService {
+    rpc FindAll(FindAllOrderItemRequest) returns (ApiResponsePaginationOrderItem);
+    rpc FindByActive(FindAllOrderItemRequest) returns (ApiResponsePaginationOrderItemDeleteAt);
+    rpc FindByTrashed(FindAllOrderItemRequest) returns (ApiResponsePaginationOrderItemDeleteAt);
+    rpc FindOrderItemByOrder(FindByIdOrderItemRequest) returns (ApiResponsesOrderItem);
+}

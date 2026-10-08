@@ -1,0 +1,152 @@
+package cart_test
+
+import (
+	"context"
+	"github.com/MamangRust/microservice-ecommerce-grpc-cart/repository"
+	"github.com/MamangRust/microservice-ecommerce-grpc-pb/product"
+	"github.com/MamangRust/microservice-ecommerce-grpc-pb/user"
+	"github.com/MamangRust/microservice-ecommerce-pkg/adapter"
+	"github.com/MamangRust/microservice-ecommerce-pkg/resilience"
+	"github.com/MamangRust/microservice-ecommerce-shared/domain/requests"
+	tests "github.com/MamangRust/microservice-ecommerce-test"
+	"github.com/stretchr/testify/suite"
+	"testing"
+	"time"
+)
+
+type CartRepositoryTestSuite struct {
+	tests.BaseTestSuite
+	repo *repository.Repositories
+}
+
+func (s *CartRepositoryTestSuite) SetupSuite() {
+	s.BaseTestSuite.SetupSuite()
+
+	// Setup dependencies
+	s.SetupUserService()
+	s.SetupCategoryService()
+	s.SetupMerchantService()
+	s.SetupProductService()
+
+	guardUser := resilience.NewDependencyGuard("user", 5, 30, 100, 3*time.Second, s.Log)
+	guardProduct := resilience.NewDependencyGuard("product", 5, 30, 100, 3*time.Second, s.Log)
+	s.repo = repository.NewRepositories(
+		s.SQLxDB(),
+		pb_user.NewUserQueryServiceClient(s.Conns["user"]),
+		pb_product.NewProductQueryServiceClient(s.Conns["product"]),
+		repository.GuardOptions{
+			User:    []adapter.GuardOption{adapter.WithDependencyGuard(guardUser)},
+			Product: []adapter.GuardOption{adapter.WithDependencyGuard(guardProduct)},
+		},
+	)
+}
+
+func (s *CartRepositoryTestSuite) TearDownSuite() {
+	s.BaseTestSuite.TearDownSuite()
+}
+
+// Cart has no soft-delete (Trash/Restore) — only Create, Find, Delete, DeleteAll.
+func (s *CartRepositoryTestSuite) TestCartLifecycle() {
+	ctx := context.Background()
+
+	// Seed dependencies
+	childUserID := s.SeedUser(ctx)
+	childCategoryID := s.SeedCategory(ctx)
+	childMerchantID := s.SeedMerchant(ctx, childUserID)
+	prodID := s.SeedProduct(ctx, childMerchantID, childCategoryID)
+	prodID2 := s.SeedProduct(ctx, childMerchantID, childCategoryID)
+
+	// Fetch product details for the cart record
+	prodRes, err := pb_product.NewProductQueryServiceClient(s.Conns["product"]).FindById(ctx, &pb_product.FindByIdProductRequest{Id: int32(prodID)})
+	s.Require().NoError(err)
+	s.Require().NotNil(prodRes)
+	s.Require().NotNil(prodRes.Data)
+
+	// 1. Create first cart item
+	req := &requests.CartCreateRecord{
+		UserID:       childUserID,
+		ProductID:    prodID,
+		Name:         prodRes.Data.Name,
+		Price:        int(prodRes.Data.Price),
+		ImageProduct: prodRes.Data.ImageProduct,
+		Quantity:     2,
+		Weight:       int(prodRes.Data.Weight),
+	}
+	created, err := s.repo.CartCommand.CreateCart(ctx, req)
+	s.NoError(err)
+	s.NotNil(created)
+	s.Equal(int32(childUserID), created.UserID)
+	cart1ID := int(created.CartID)
+
+	// 2. Create second cart item
+	prodRes2, err := pb_product.NewProductQueryServiceClient(s.Conns["product"]).FindById(ctx, &pb_product.FindByIdProductRequest{Id: int32(prodID2)})
+	s.Require().NoError(err)
+
+	req2 := &requests.CartCreateRecord{
+		UserID:       childUserID,
+		ProductID:    prodID2,
+		Name:         prodRes2.Data.Name,
+		Price:        int(prodRes2.Data.Price),
+		ImageProduct: prodRes2.Data.ImageProduct,
+		Quantity:     1,
+		Weight:       int(prodRes2.Data.Weight),
+	}
+	created2, err := s.repo.CartCommand.CreateCart(ctx, req2)
+	s.NoError(err)
+	s.NotNil(created2)
+	cart2ID := int(created2.CartID)
+
+	// 3. FindCarts — list all items for the user
+	items, err := s.repo.CartQuery.FindCarts(ctx, &requests.FindAllCarts{
+		UserID:   childUserID,
+		Page:     1,
+		PageSize: 10,
+		Search:   "",
+	})
+	s.NoError(err)
+	s.NotEmpty(items)
+
+	// 4. DeletePermanent — remove first cart item
+	delSuccess, err := s.repo.CartCommand.DeletePermanent(ctx, &requests.DeleteCartRequest{
+		UserID: childUserID,
+		CartID: cart1ID,
+	})
+	s.NoError(err)
+	s.True(delSuccess)
+
+	// 5. Verify only one item remains
+	remainingItems, err := s.repo.CartQuery.FindCarts(ctx, &requests.FindAllCarts{
+		UserID:   childUserID,
+		Page:     1,
+		PageSize: 10,
+		Search:   "",
+	})
+	s.NoError(err)
+	s.Len(remainingItems, 1)
+	s.Equal(cart2ID, int(remainingItems[0].CartID))
+
+	// 6. DeleteAllPermanently — remove all remaining items
+	delAllSuccess, err := s.repo.CartCommand.DeleteAllPermanently(ctx, &requests.DeleteAllCartRequest{
+		UserID:  childUserID,
+		CartIds: []int{cart2ID},
+	})
+	s.NoError(err)
+	s.True(delAllSuccess)
+
+	// 7. Verify cart is empty
+	emptyItems, err := s.repo.CartQuery.FindCarts(ctx, &requests.FindAllCarts{
+		UserID:   childUserID,
+		Page:     1,
+		PageSize: 10,
+		Search:   "",
+	})
+	s.NoError(err)
+	s.Empty(emptyItems)
+}
+
+func TestCartRepositorySuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	suite.Run(t, new(CartRepositoryTestSuite))
+}

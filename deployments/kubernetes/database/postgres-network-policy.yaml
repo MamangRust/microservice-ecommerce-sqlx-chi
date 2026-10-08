@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-netpol
+  namespace: ecommerce
+spec:
+  # Satu policy untuk keenam instance: semuanya diberi label tier=postgres.
+  # Yang boleh masuk hanya PgBouncer dan postgres-exporter di namespace ini
+  # (port 5432).
+  podSelector:
+    matchLabels:
+      tier: postgres
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+    # DNS resolution for outbound service names.
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

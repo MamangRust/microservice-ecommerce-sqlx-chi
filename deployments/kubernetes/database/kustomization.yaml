@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+# PostgreSQL (database-per-bounded-context)
+- postgres-identity.yaml
+- postgres-merchant.yaml
+- postgres-catalog.yaml
+- postgres-sales.yaml
+- postgres-experience.yaml
+- postgres-email.yaml
+- postgres-network-policy.yaml
+# PgBouncer (session pooling)
+- pgbouncer-identity.yaml
+- pgbouncer-merchant.yaml
+- pgbouncer-catalog.yaml
+- pgbouncer-sales.yaml
+- pgbouncer-experience.yaml
+- pgbouncer-email.yaml
+- pgbouncer-network-policy.yaml
+# postgres-exporter
+- postgres-exporter-identity.yaml
+- postgres-exporter-merchant.yaml
+- postgres-exporter-catalog.yaml
+- postgres-exporter-sales.yaml
+- postgres-exporter-experience.yaml
+- postgres-exporter-email.yaml
+- postgres-exporter-network-policy.yaml
+# ClickHouse (analytics)
+- clickhouse-pvc.yaml
+- clickhouse-deployment.yaml
+- clickhouse-service.yaml
+- clickhouse-network-policy.yaml
+# Migration
+- migrate-job.yaml
+- migrate-network-policy.yaml

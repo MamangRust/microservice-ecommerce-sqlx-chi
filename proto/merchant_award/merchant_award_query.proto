@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb.merchant_award;
+
+import "merchant_award/merchant_award_common.proto";
+import "merchant/merchant_query.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/merchant_award;pb_merchant_award";
+
+service MerchantAwardQueryService {
+    rpc FindAll(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantAward);
+    rpc FindById(FindByIdMerchantAwardRequest) returns (ApiResponseMerchantAward);
+
+    rpc FindByActive(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantAwardDeleteAt);
+    rpc FindByTrashed(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantAwardDeleteAt);
+}

@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pgbouncer-netpol
+  namespace: ecommerce
+spec:
+  # Satu policy untuk keenam pooler: semuanya diberi label tier=pgbouncer.
+  # Ingress dari service aplikasi + job migrate di namespace ini (port 5432),
+  # egress ke Postgres di namespace yang sama plus DNS.
+  podSelector:
+    matchLabels:
+      tier: pgbouncer
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ecommerce
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

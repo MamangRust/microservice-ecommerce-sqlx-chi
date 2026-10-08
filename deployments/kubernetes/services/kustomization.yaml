@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- apigateway/
+- auth/
+- banner/
+- cart/
+- category/
+- email/
+- merchant/
+- merchant_award/
+- merchant_business/
+- merchant_detail/
+- merchant_policy/
+- order/
+- order_item/
+- product/
+- review/
+- review_detail/
+- role/
+- shipping_address/
+- slider/
+- stats_reader/
+- stats_writer/
+- transaction/
+- user/

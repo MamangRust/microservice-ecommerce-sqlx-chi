@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: ecommerce
+  labels:
+    app: migrate
+spec:
+  template:
+    metadata:
+      labels:
+        app: migrate
+    spec:
+      # Satu bounded context = satu PostgreSQL + satu PgBouncer: tunggu keenam
+      # pooler siap sebelum menjalankan migrasi. Yang di-probe PgBouncer, bukan
+      # PostgreSQL, karena hanya pooler yang diekspos sebagai Service ke beban
+      # kerja aplikasi.
+      initContainers:
+        - name: wait-for-pgbouncer
+          image: busybox:1.35
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "[INIT] Waiting for the six PgBouncer instances..."
+              until nc -z pgbouncer-identity.ecommerce.svc.cluster.local 5432 \
+                && nc -z pgbouncer-merchant.ecommerce.svc.cluster.local 5432 \
+                && nc -z pgbouncer-catalog.ecommerce.svc.cluster.local 5432 \
+                && nc -z pgbouncer-sales.ecommerce.svc.cluster.local 5432 \
+                && nc -z pgbouncer-experience.ecommerce.svc.cluster.local 5432 \
+                && nc -z pgbouncer-email.ecommerce.svc.cluster.local 5432; do
+                echo "PgBouncer not ready yet. Retrying in 5 seconds..."
+                sleep 5
+              done
+              echo "[INIT] All PgBouncer instances are ready!"
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "64Mi"
+              cpu: "100m"
+      containers:
+        - name: migrate
+          image: ghcr.io/__GHCR_OWNER__/vertx-ecommerce/db-migration:latest
+          workingDir: /app
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: OnFailure

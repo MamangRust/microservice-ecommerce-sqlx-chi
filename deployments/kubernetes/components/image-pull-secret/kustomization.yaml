@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Dipakai bersama oleh root (deployments/kubernetes) dan overlays/production.
+# Kustomize melarang overlay memuat file patch di luar root-nya sendiri, jadi
+# patch imagePullSecrets dijadikan component yang bisa dirujuk dari dua tempat.
+patches:
+- path: image-pull-secret-patch.yaml
+  target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: "^(apigateway|auth|banner|cart|category|email|merchant|merchant-award|merchant-business|merchant-detail|merchant-policy|order|order-item|product|review|review-detail|role|shipping-address|slider|stats-reader|stats-writer|transaction|user)$"
+- path: job-image-pull-secret-patch.yaml
+  target:
+    group: batch
+    version: v1
+    kind: Job
+    name: "^(migrate|stats-backfill)$"

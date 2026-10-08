@@ -1,0 +1,68 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: stats-backfill
+  namespace: ecommerce
+spec:
+  # Manual job: apply it explicitly when historical OLTP rows need to be
+  # materialized into ClickHouse. Re-running is safe — event ids are
+  # deterministic per source row, so ClickHouse ReplacingMergeTree dedups.
+  backoffLimit: 3
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+        - name: wait-for-deps
+          image: busybox:1.35
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "[INIT] Waiting for the OLTP gRPC services + ClickHouse..."
+              # Backfill reads historical rows through the owning services'
+              # gRPC adapters (order, order_item, product, category,
+              # transaction) — it does not open a PostgreSQL connection itself.
+              until nc -z order.ecommerce.svc.cluster.local 50057 \
+                && nc -z order-item.ecommerce.svc.cluster.local 50056 \
+                && nc -z product.ecommerce.svc.cluster.local 50058 \
+                && nc -z category.ecommerce.svc.cluster.local 50054 \
+                && nc -z transaction.ecommerce.svc.cluster.local 50059 \
+                && nc -z clickhouse.ecommerce.svc.cluster.local 9000; do
+                echo "Dependencies not ready yet. Retrying in 5 seconds..."
+                sleep 5
+              done
+              echo "[INIT] All dependencies are ready!"
+      containers:
+        - name: stats-backfill
+          image: ghcr.io/__GHCR_OWNER__/vertx-ecommerce/stats_writer:latest
+          imagePullPolicy: IfNotPresent
+          args: ["backfill"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: app-logs
+              mountPath: /var/log/app
+      volumes:
+        - name: app-logs
+          persistentVolumeClaim:
+            claimName: app-logs-pvc
+      restartPolicy: OnFailure

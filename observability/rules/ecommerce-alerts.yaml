@@ -1,0 +1,256 @@
+groups:
+  - name: ecommerce-alerts
+    rules:
+      # ── Service availability (scraped per-service by Prometheus) ───────────
+      - alert: ServiceDown
+        expr: |
+          up{job!~"prometheus|alertmanager|otel-collector|node-exporter|kafka-exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.job }} is down"
+          description: "Scrape target {{ $labels.job }} ({{ $labels.instance }}) has been unreachable for 2 minutes — the service is down or crash-looping."
+          runbook: "Runbook #1 ServiceDown (crash loop): docker ps / kubectl get pods, docker logs --tail 200, check DB/Redis/Kafka reachability."
+
+      # ── Per-service gRPC error rate (grpc_errors_total / grpc_requests_total) ──
+      - alert: HighGrpcErrorRate
+        expr: |
+          sum by (job) (
+            rate(grpc_errors_total[5m])
+          )
+          /
+          sum by (job) (
+            rate(grpc_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High gRPC error rate on {{ $labels.job }} ({{ $value | humanizePercentage }})"
+          description: "More than 5% of gRPC requests to {{ $labels.job }} failed in the last 5 minutes."
+          runbook: "Runbook #7 error rate: check logs with trace_id (OTLP → Loki), gRPC status mapping, dependency failures."
+
+      - alert: CriticalGrpcErrorRate
+        expr: |
+          sum by (job) (
+            rate(grpc_errors_total[5m])
+          )
+          /
+          sum by (job) (
+            rate(grpc_requests_total[5m])
+          ) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical gRPC error rate on {{ $labels.job }} ({{ $value | humanizePercentage }})"
+          description: "More than 20% of gRPC requests to {{ $labels.job }} failed in the last 5 minutes."
+
+      # ── Dependency failure signals (gRPC status codes) ─────────────────────
+      - alert: GrpcUnavailableHigh
+        expr: |
+          sum by (job) (
+            rate(grpc_requests_total{grpc_status="Unavailable"}[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High Unavailable gRPC status on {{ $labels.job }} ({{ $value }}/s)"
+          description: "{{ $labels.job }} is seeing {{ $value }} Unavailable responses per second — a downstream service is down."
+          runbook: "Runbook #4 GrpcUnavailableHigh: check the downstream service target (up? crash loop? resource limits?)."
+
+      - alert: GrpcTimeoutHigh
+        expr: |
+          sum by (job) (
+            rate(grpc_requests_total{grpc_status="DeadlineExceeded"}[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High DeadlineExceeded on {{ $labels.job }} ({{ $value }}/s)"
+          description: "{{ $labels.job }} is seeing {{ $value }} DeadlineExceeded responses per second — a downstream service is slow."
+          runbook: "Runbook #4 GrpcTimeoutHigh: latency histogram of the receiving service, ContextMiddleware(30s) timeout, heavy queries."
+
+      # ── Per-service p95 gRPC latency (histogram from OTel) ──────────────────
+      - alert: HighGrpcLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, job) (
+              rate(grpc_request_duration_seconds_bucket[5m])
+            )
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High gRPC latency on {{ $labels.job }} (p95 = {{ $value }}s)"
+          description: "95th percentile latency for {{ $labels.job }} exceeded 1s for 5 minutes."
+          runbook: "Runbook #7 latency: check DB query times, cache miss rate, downstream gRPC calls."
+
+      # ── API Gateway HTTP (http_requests_total / http_errors_total) ─────────
+      - alert: Http5xxSpike
+        expr: |
+          sum by (route) (
+            rate(http_errors_total[5m])
+          )
+          /
+          sum by (route) (
+            rate(http_requests_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx spike on route {{ $labels.route }} ({{ $value | humanizePercentage }})"
+          description: "More than 10% of requests to route {{ $labels.route }} returned 5xx in the last 5 minutes."
+          runbook: "Runbook #5 Http5xxSpike: check upstream gRPC service for that route (Unavailable? Internal?), error mapping in ParseGrpcError."
+
+      - alert: HighHttpLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, route) (
+              rate(http_request_duration_seconds_bucket[5m])
+            )
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP latency on route {{ $labels.route }} (p95 = {{ $value }}s)"
+          description: "95th percentile latency for route {{ $labels.route }} exceeded 2s for 5 minutes."
+
+      # ── PostgreSQL connection pool (per-service gauges) ────────────────────
+      - alert: PostgresPoolExhaustion
+        expr: |
+          postgresql_pool_acquired_conns >= postgresql_pool_max_conns
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL pool exhausted on {{ $labels.job }}"
+          description: "{{ $labels.job }} has acquired all {{ $value }} connections in its pool — queries are queueing."
+          runbook: "Runbook #2 PostgresPoolExhaustion: pg_stat_activity for idle-in-transaction leaks, DB_MAX_OPEN_CONNS, defer close/rollback."
+
+      # ── Redis pool availability / miss rate ────────────────────────────────
+      - alert: RedisUnavailable
+        expr: |
+          redis_pool_total_conns == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis pool empty on {{ $labels.job }}"
+          description: "{{ $labels.job }} reports zero Redis connections — Redis is unreachable or the pool failed to initialise."
+          runbook: "Runbook #3 RedisUnavailable: redis-cli ping, container health, REDIS_HOST_<SERVICE>/REDIS_PORT_<SERVICE> env."
+
+      - alert: RedisHighMissRate
+        expr: |
+          sum by (job) (
+            rate(redis_pool_misses_total[5m])
+          )
+          /
+          (
+            sum by (job) (
+              rate(redis_pool_hits_total[5m])
+            )
+            +
+            sum by (job) (
+              rate(redis_pool_misses_total[5m])
+            )
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Redis cache miss rate on {{ $labels.job }} ({{ $value | humanizePercentage }})"
+          description: "More than 50% of Redis lookups on {{ $labels.job }} miss — check TTLs, eviction (maxmemory), or a cold cache after restart."
+          runbook: "Runbook #3 RedisHighMissRate: TTL too short, maxmemory eviction, thundering herd after Redis restart."
+
+      # ── Outbox relay lag (order + transaction, label service=order/transaction) ──
+      - alert: OutboxLagGrowing
+        expr: |
+          delta(outbox_events_pending[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox events accumulating on {{ $labels.service }}"
+          description: "Pending outbox events on {{ $labels.service }} are growing ({{ $value }} new in 10m) — the relay may be stuck or Kafka is unreachable."
+          runbook: "Check the outbox relay (service/{{ $labels.service }}/service/outboxService.go) is running; verify Kafka producer health and consumer group lag."
+
+      - alert: OutboxBacklogHigh
+        expr: |
+          outbox_events_pending > 10000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox backlog on {{ $labels.service }} ({{ $value }} events)"
+          description: "More than 10000 events pending delivery on {{ $labels.service }} — stats events will be delayed or dropped."
+          runbook: "Restart the outbox relay, check Kafka broker health, verify stats-writer consumer is consuming."
+
+      # ── Kafka publish / consume errors ─────────────────────────────────────
+      - alert: KafkaPublishErrorsHigh
+        expr: |
+          sum by (topic) (
+            rate(kafka_publish_errors_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka publish errors on topic {{ $labels.topic }} ({{ $value }}/s)"
+          description: "{{ $labels.topic }} is seeing {{ $value }} publish errors per second — outbox relay will retry transactionally."
+          runbook: "Runbook #6 KafkaPublishErrorsHigh: kafka-exporter up, broker reachable, under-replicated partitions."
+
+      - alert: KafkaConsumeErrorsHigh
+        expr: |
+          sum by (group) (
+            rate(kafka_consume_errors_total[5m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka consume errors in group {{ $labels.group }} ({{ $value }}/s)"
+          description: "Consumer group {{ $labels.group }} is seeing {{ $value }} consume errors per second."
+          runbook: "Runbook #6 KafkaConsumeErrorsHigh: check consumer service logs (email service), message format, dead-letter queue."
+
+      # ── Email delivery health (email service counters) ─────────────────────
+      - alert: EmailDeadLetterHigh
+        expr: |
+          rate(email_deadletter_total[15m]) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Emails dead-lettered"
+          description: "Email service has dead-lettered messages after exhausting retries — check SMTP config and payloads."
+
+      - alert: EmailFailureRate
+        expr: |
+          sum(rate(email_failed_total[15m]))
+          /
+          clamp_min(sum(rate(email_sent_total[15m])) + sum(rate(email_failed_total[15m])), 1) > 0.2
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High email failure rate ({{ $value | humanizePercentage }})"
+          description: "More than 20% of emails failed to send in the last 15 minutes."
+
+      # ── No-traffic watchdog (stuck / flapping deployment) ──────────────────
+      - alert: NoTraffic
+        expr: |
+          sum by (job) (
+            rate(grpc_requests_total[10m])
+          ) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No gRPC traffic on {{ $labels.job }}"
+          description: "{{ $labels.job }} received no gRPC requests for 15 minutes. Verify the deployment is not stuck or the service is idle by design."

@@ -1,0 +1,460 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Ecommerce financial KPIs from the stats pipeline (ClickHouse): GMV, order volume, order items, transactions by method/status.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Revenue & Order Volume",
+      "type": "row"
+    },
+    {
+      "id": 101,
+      "type": "stat",
+      "title": "GMV (Total Sales)",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT sum(total_price) AS gmv FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "Orders",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT count() AS orders FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "Average Order Value",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT if(count() = 0, 0, sum(total_price) / count()) AS aov FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "Items Sold",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT sum(quantity) AS items FROM ecommerce.order_item_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "Unique Customers",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT uniqExact(user_id) AS customers FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "Transactions",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT count() AS txn FROM ecommerce.transaction_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000)",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 110,
+      "title": "Trends",
+      "type": "row"
+    },
+    {
+      "id": 111,
+      "type": "timeseries",
+      "title": "GMV over time (daily)",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "spanNulls": true
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum", "mean"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT toDate(created_at) AS t, sum(total_price) AS gmv FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY t ORDER BY t",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "type": "timeseries",
+      "title": "Orders over time (daily)",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "spanNulls": true
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum", "mean"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT toDate(created_at) AS t, count() AS orders FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY t ORDER BY t",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 120,
+      "title": "Breakdowns",
+      "type": "row"
+    },
+    {
+      "id": 121,
+      "type": "piechart",
+      "title": "Transactions by Payment Method",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" },
+        "pieType": "pie",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT payment_method, count() AS cnt FROM ecommerce.transaction_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY payment_method ORDER BY cnt DESC",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "type": "piechart",
+      "title": "Transactions by Status",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "right" },
+        "pieType": "pie",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT status, count() AS cnt FROM ecommerce.transaction_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY status ORDER BY cnt DESC",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 123,
+      "type": "barchart",
+      "title": "Top Merchants by GMV",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 15 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT toString(merchant_id) AS merchant, sum(total_price) AS gmv FROM ecommerce.order_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY merchant ORDER BY gmv DESC LIMIT 10",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 124,
+      "type": "barchart",
+      "title": "Top Categories by Items Sold",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT if(category_name = '', toString(category_id), category_name) AS category, sum(quantity) AS items FROM ecommerce.order_item_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY category ORDER BY items DESC LIMIT 10",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "type": "timeseries",
+      "title": "Transaction volume by status (daily)",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "custom": {
+            "fillOpacity": 30,
+            "lineWidth": 2,
+            "spanNulls": true
+          },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["sum", "mean"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "refId": "A",
+          "rawSql": "SELECT toDate(created_at) AS t, status, count() AS cnt FROM ecommerce.transaction_events FINAL WHERE created_at >= toDateTime($__from / 1000) AND created_at <= toDateTime($__to / 1000) GROUP BY t, status ORDER BY t",
+          "format": 1,
+          "meta": { "builderOptions": { "builderMode": "sql", "limit": 500, "queryFormat": "sql" } }
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["ecommerce", "financial", "kpi", "clickhouse"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Ecommerce Financial",
+  "uid": "ecommerce-financial",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package pb.slider;
+
+import "slider/slider_common.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/slider;pb_slider";
+
+message FindAllSliderRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+service SliderQueryService {
+    rpc FindAll(FindAllSliderRequest) returns (ApiResponsePaginationSlider);
+    rpc FindById(FindByIdSliderRequest) returns (ApiResponseSlider);
+    rpc FindByTrashed(FindAllSliderRequest) returns (ApiResponsePaginationSliderDeleteAt);
+    rpc FindByActive(FindAllSliderRequest) returns (ApiResponsePaginationSliderDeleteAt);
+}

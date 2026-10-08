@@ -1,0 +1,26 @@
+package merchantpolicyapimapper
+
+import (
+	"github.com/MamangRust/microservice-ecommerce-grpc-pb/merchant_policy"
+	"github.com/MamangRust/microservice-ecommerce-shared/domain/response"
+)
+
+type MerchantPolicyBaseResponseMapper interface {
+	ToResponseMerchantPolicy(merchant *pb_merchant_policy.MerchantPoliciesResponse) *response.MerchantPoliciesResponse
+	ToResponsesMerchantPolicy(merchants []*pb_merchant_policy.MerchantPoliciesResponse) []*response.MerchantPoliciesResponse
+	ToApiResponseMerchantPolicies(pbResponse *pb_merchant_policy.ApiResponseMerchantPolicies) *response.ApiResponseMerchantPolicies
+}
+
+type MerchantPolicyQueryResponseMapper interface {
+	MerchantPolicyBaseResponseMapper
+	ToApiResponsesMerchantPolicies(pbResponse *pb_merchant_policy.ApiResponsesMerchantPolicies) *response.ApiResponsesMerchantPolicies
+	ToApiResponsePaginationMerchantPolicies(pbResponse *pb_merchant_policy.ApiResponsePaginationMerchantPolicies) *response.ApiResponsePaginationMerchantPolicies
+	ToApiResponsePaginationMerchantPoliciesDeleteAt(pbResponse *pb_merchant_policy.ApiResponsePaginationMerchantPoliciesDeleteAt) *response.ApiResponsePaginationMerchantPoliciesDeleteAt
+}
+
+type MerchantPolicyCommandResponseMapper interface {
+	MerchantPolicyBaseResponseMapper
+	ToResponseMerchantPolicyDeleteAt(merchant *pb_merchant_policy.MerchantPoliciesResponseDeleteAt) *response.MerchantPoliciesResponseDeleteAt
+	ToResponsesMerchantPolicyDeleteAt(merchants []*pb_merchant_policy.MerchantPoliciesResponseDeleteAt) []*response.MerchantPoliciesResponseDeleteAt
+	ToApiResponseMerchantPoliciesDeleteAt(pbResponse *pb_merchant_policy.ApiResponseMerchantPoliciesDeleteAt) *response.ApiResponseMerchantPoliciesDeleteAt
+}

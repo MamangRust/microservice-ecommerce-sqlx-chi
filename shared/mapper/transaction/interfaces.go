@@ -1,0 +1,28 @@
+package transactionapimapper
+
+import (
+	"github.com/MamangRust/microservice-ecommerce-grpc-pb/transaction"
+	"github.com/MamangRust/microservice-ecommerce-shared/domain/response"
+)
+
+type TransactionBaseResponseMapper interface {
+	ToResponseTransaction(transaction *pb_transaction.TransactionResponse) *response.TransactionResponse
+	ToResponsesTransaction(transactions []*pb_transaction.TransactionResponse) []*response.TransactionResponse
+	ToApiResponseTransaction(pbResponse *pb_transaction.ApiResponseTransaction) *response.ApiResponseTransaction
+	ToApiResponsePaginationTransactionDeleteAt(pbResponse *pb_transaction.ApiResponsePaginationTransactionDeleteAt) *response.ApiResponsePaginationTransactionDeleteAt
+}
+
+type TransactionQueryResponseMapper interface {
+	TransactionBaseResponseMapper
+	ToApiResponsesTransaction(pbResponse *pb_transaction.ApiResponsesTransaction) *response.ApiResponsesTransaction
+	ToApiResponsePaginationTransaction(pbResponse *pb_transaction.ApiResponsePaginationTransaction) *response.ApiResponsePaginationTransaction
+}
+
+type TransactionCommandResponseMapper interface {
+	TransactionBaseResponseMapper
+	ToResponseTransactionDeleteAt(transaction *pb_transaction.TransactionResponseDeleteAt) *response.TransactionResponseDeleteAt
+	ToResponsesTransactionDeleteAt(transactions []*pb_transaction.TransactionResponseDeleteAt) []*response.TransactionResponseDeleteAt
+	ToApiResponseTransactionDeleteAt(pbResponse *pb_transaction.ApiResponseTransactionDeleteAt) *response.ApiResponseTransactionDeleteAt
+	ToApiResponseTransactionDelete(pbResponse *pb_transaction.ApiResponseTransactionDelete) *response.ApiResponseTransactionDelete
+	ToApiResponseTransactionAll(pbResponse *pb_transaction.ApiResponseTransactionAll) *response.ApiResponseTransactionAll
+}

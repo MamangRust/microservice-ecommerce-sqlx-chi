@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package pb.user;
+
+import "user/user_common.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/user;pb_user";
+
+message FindAllUserRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+service UserQueryService {
+    rpc FindAll(FindAllUserRequest) returns (ApiResponsePaginationUser);
+    rpc FindById(FindByIdUserRequest) returns (ApiResponseUser);
+    rpc FindByEmail(FindByEmailRequest) returns (ApiResponseUserWithPassword);
+    rpc FindByVerificationCode(FindByVerificationCodeRequest) returns (ApiResponseUser);
+
+    rpc FindByActive(FindAllUserRequest) returns (ApiResponsePaginationUserDeleteAt);
+    rpc FindByTrashed(FindAllUserRequest) returns (ApiResponsePaginationUserDeleteAt);
+}

@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package pb.banner;
+
+import "google/protobuf/empty.proto";
+import "banner/banner_common.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/banner;pb_banner";
+
+
+message CreateBannerRequest {
+    string name = 1;
+    string start_date = 2; 
+    string end_date = 3;
+    string start_time = 4; 
+    string end_time = 5;
+    bool is_active = 6;
+}
+  
+message UpdateBannerRequest {
+    int32 banner_id = 1;
+    string name = 2;
+    string start_date = 3;
+    string end_date = 4;
+    string start_time = 5;
+    string end_time = 6;
+    bool is_active = 7;
+}
+
+service BannerCommandService {
+    rpc Create(CreateBannerRequest) returns (ApiResponseBanner);
+    rpc Update(UpdateBannerRequest) returns (ApiResponseBanner);
+    
+    rpc Trash(FindByIdBannerRequest) returns (ApiResponseBannerDeleteAt);
+    rpc Restore(FindByIdBannerRequest) returns (ApiResponseBannerDeleteAt);
+    
+    rpc DeletePermanent(FindByIdBannerRequest) returns (ApiResponseBannerDelete);
+
+    rpc RestoreAll(google.protobuf.Empty) returns (ApiResponseBannerAll);
+    rpc DeleteAll(google.protobuf.Empty) returns (ApiResponseBannerAll);
+}

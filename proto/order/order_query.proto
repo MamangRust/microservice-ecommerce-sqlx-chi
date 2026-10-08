@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package pb.order;
+
+import "order/order_common.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/order;pb_order";
+
+message FindAllOrderRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+message FindAllOrderMerchantRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+    int32 merchant_id = 4;
+}
+
+service OrderQueryService {
+    rpc FindAll(
+        FindAllOrderRequest
+    ) returns (
+        ApiResponsePaginationOrder
+    );
+
+    rpc FindById(
+        FindByIdOrderRequest
+    ) returns (
+        ApiResponseOrder
+    );
+
+    rpc FindByActive(
+        FindAllOrderRequest
+    ) returns (
+        ApiResponsePaginationOrderDeleteAt
+    );
+
+    rpc FindByTrashed(
+        FindAllOrderRequest
+    ) returns (
+        ApiResponsePaginationOrderDeleteAt
+    );
+}

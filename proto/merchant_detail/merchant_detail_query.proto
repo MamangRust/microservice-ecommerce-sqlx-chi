@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package pb.merchant_detail;
+
+import "merchant_detail/merchant_detail_common.proto";
+
+import "merchant/merchant_query.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/merchant_detail;pb_merchant_detail";
+
+message FindAllMerchantDetailRequest {
+    int32 page = 1;
+    int32 page_size = 2;
+    string search = 3;
+}
+
+service MerchantDetailQueryService {
+    rpc FindAll(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantDetail);
+    rpc FindById(FindByIdMerchantDetailRequest) returns (ApiResponseMerchantDetail);
+    rpc FindByActive(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantDetailDeleteAt);
+    rpc FindByTrashed(pb.merchant.FindAllMerchantRequest) returns (ApiResponsePaginationMerchantDetailDeleteAt);
+}

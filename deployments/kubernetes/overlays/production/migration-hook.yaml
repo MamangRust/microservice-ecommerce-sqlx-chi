@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    # Sebelumnya PreSync karena database dianggap sudah ada di luar app. Sekarang
+    # keenam instance PostgreSQL + PgBouncer ikut di-deploy app yang sama, jadi
+    # job harus jalan di Sync phase: sesudah pgbouncer (wave -1) dan sebelum
+    # service (wave 2).
+    argocd.argoproj.io/sync-wave: "0"
+    # Job tidak bisa di-update di tempat saat spec berubah (mis. image tag baru);
+    # Replace membuat ArgoCD menghapus lalu membuat ulang job-nya.
+    argocd.argoproj.io/sync-options: Replace=true

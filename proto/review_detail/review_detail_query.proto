@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package pb.review_detail;
+
+import "review_detail/review_detail_common.proto";
+import "review/review_query.proto";
+
+option go_package = "github.com/MamangRust/microservice-ecommerce-grpc-pb/review_detail;pb_review_detail";
+
+service ReviewDetailQueryService {
+    rpc FindAll(pb.review.FindAllReviewRequest) returns (ApiResponsePaginationReviewDetails);
+    rpc FindById(FindByIdReviewDetailRequest) returns (ApiResponseReviewDetail);
+
+    rpc FindByActive(pb.review.FindAllReviewRequest) returns (ApiResponsePaginationReviewDetailsDeleteAt);
+    rpc FindByTrashed(pb.review.FindAllReviewRequest) returns (ApiResponsePaginationReviewDetailsDeleteAt);
+}
